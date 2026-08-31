@@ -379,7 +379,9 @@ function updateAreaChip(){
 }
 
 function isLunchTime(){ const h = new Date().getHours(); return h >= 10 && h < 15; }
-function hpKey(){ return localStorage.getItem("hp_key") || ""; }
+function hpKey(){ try{ return localStorage.getItem("hp_key") || ""; }catch(e){ return ""; } }
+function hpProxy(){ try{ return localStorage.getItem("hp_proxy") || ""; }catch(e){ return ""; } }
+function apiReady(){ return !!(hpKey() || hpProxy()); }
 
 /* ---------- 画面遷移 ---------- */
 function show(id){
@@ -579,7 +581,7 @@ function handleHpData(data, c, cb){
   const err = data && data.results && data.results.error;
   if(err && err.length){
     toast("APIエラー: " + (err[0].message || "APIキーを確認してください"));
-    cb(runDemoEngine()); return;
+    state.live = false; cb(runDemoEngine()); return;
   }
   const shops = (((data || {}).results || {}).shop || []).map(normalizeHpShop);
   if(!shops.length){ cb([]); return; }
@@ -590,7 +592,29 @@ function handleHpData(data, c, cb){
   }).sort(function(a,b){ return b.score - a.score; });
   cb(scored.slice(0, 5));
 }
+const HP_EP = "https://webservice.recruit.co.jp/hotpepper/gourmet/v1/";
+function fetchJson(url, ms){
+  const ctl = new AbortController();
+  const t = setTimeout(function(){ ctl.abort(); }, ms);
+  return fetch(url, { signal: ctl.signal }).then(function(r){
+    clearTimeout(t);
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  });
+}
 function fetchHp(c, lat, lng, cb){
+  // 0段目: 自分専用プロキシ（設定されていれば最優先・最も安定）
+  if(hpProxy()){
+    const p = hpParams(c, lat, lng, "json");
+    p.delete("key"); p.delete("format"); // キーとformatはプロキシ側が付ける
+    fetchJson(hpProxy() + "?" + p.toString(), 12000)
+      .then(function(data){ handleHpData(data, c, cb); })
+      .catch(function(){
+        toast("プロキシ接続に失敗。設定URLを確認してください。今回はデモデータで表示します");
+        state.live = false; cb(runDemoEngine());
+      });
+    return;
+  }
   // 1段目: JSONP（このAPIはCORS非対応のため、scriptタグ読み込みで取得する）
   let settled = false;
   const tag = document.createElement("script");
@@ -602,19 +626,25 @@ function fetchHp(c, lat, lng, cb){
     if(settled) return; settled = true; cleanup(); handleHpData(data, c, cb);
   };
   tag.onerror = function(){ fail("読み込み失敗"); };
-  tag.src = "https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?" + hpParams(c, lat, lng, "jsonp").toString() + "&callback=__hpcb";
+  tag.src = HP_EP + "?" + hpParams(c, lat, lng, "jsonp").toString() + "&callback=__hpcb";
   document.body.appendChild(tag);
 }
-function fetchHpRelay(c, lat, lng, cb, why){
-  // 2段目: 公開CORS中継サービス経由の保険。JSONPが端末・回線側でブロックされた場合に効く
-  const apiUrl = "https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?" + hpParams(c, lat, lng, "json").toString();
-  fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(apiUrl))
-    .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+// 2段目: 公開CORS中継サービスを順に試す保険。JSONPが端末・回線側でブロックされた場合に効く
+const HP_RELAYS = [
+  function(u){ return "https://corsproxy.io/?url=" + encodeURIComponent(u); },
+  function(u){ return "https://api.allorigins.win/raw?url=" + encodeURIComponent(u); },
+];
+function fetchHpRelay(c, lat, lng, cb, why, idx){
+  idx = idx || 0;
+  if(idx >= HP_RELAYS.length){
+    toast("API接続に失敗（" + why + "）。今回はデモデータで表示します。安定させるにはプロキシ設定がおすすめです");
+    state.live = false; cb(runDemoEngine());
+    return;
+  }
+  const apiUrl = HP_EP + "?" + hpParams(c, lat, lng, "json").toString();
+  fetchJson(HP_RELAYS[idx](apiUrl), 8000)
     .then(function(data){ handleHpData(data, c, cb); })
-    .catch(function(){
-      toast("API接続に失敗（" + why + "）。今回はデモデータで表示します");
-      cb(runDemoEngine());
-    });
+    .catch(function(){ fetchHpRelay(c, lat, lng, cb, why, idx + 1); });
 }
 function normalizeHpShop(s, idx){
   const yes = function(v){ return typeof v === "string" && (v.indexOf("あり") >= 0 || v.indexOf("営業") >= 0 || v.indexOf("OK") >= 0); };
@@ -638,7 +668,7 @@ function normalizeHpShop(s, idx){
 function decide(){
   show("scr-loading");
   $("loading-msg").textContent = ["いい店、探してる…","雰囲気まで見てる…","責任もって決めてます…"][Math.floor(Math.random()*3)];
-  state.live = !!hpKey();
+  state.live = apiReady();
   const done = function(queue){
     state.queue = queue; state.altIndex = 0;
     setTimeout(function(){
@@ -697,16 +727,20 @@ function shareLine(){
 
 /* ---------- APIキー設定・共有URL復元 ---------- */
 function configureKey(){
-  const cur = hpKey();
-  const k = window.prompt("ホットペッパーAPIキーを入力（空で解除）\nhttps://webservice.recruit.co.jp/ で無料発行", cur);
+  const cur = hpProxy() || hpKey();
+  const k = window.prompt("ホットペッパーAPIキー、またはプロキシURL（https://script.google.com/…/exec）を入力（空で解除）", cur);
   if(k === null) return;
-  if(k.trim()){ localStorage.setItem("hp_key", k.trim()); toast("本物のお店で検索します"); }
-  else { localStorage.removeItem("hp_key"); toast("デモデータに戻しました"); }
+  const v = k.trim();
+  try{ localStorage.removeItem("hp_key"); localStorage.removeItem("hp_proxy"); }catch(e){}
+  if(!v){ toast("デモデータに戻しました"); }
+  else if(v.indexOf("http") === 0){ localStorage.setItem("hp_proxy", v); toast("プロキシ経由で検索します（安定モード）"); }
+  else { localStorage.setItem("hp_key", v); toast("本物のお店で検索します"); }
   updateBadge();
 }
 function updateBadge(){
   const b = $("mode-badge");
-  if(hpKey()){ b.textContent = "ホットペッパーAPI連携中（タップで変更）"; b.classList.add("live"); }
+  if(hpProxy()){ b.textContent = "プロキシ連携中・安定モード（タップで変更）"; b.classList.add("live"); }
+  else if(hpKey()){ b.textContent = "ホットペッパーAPI連携中（タップで変更）"; b.classList.add("live"); }
   else { b.textContent = "デモデータで動作中（タップでAPIキー設定）"; b.classList.remove("live"); }
 }
 function toast(msg){
@@ -715,7 +749,13 @@ function toast(msg){
 }
 (function init(){
   const q = new URLSearchParams(location.search);
-  if(q.get("key")){ localStorage.setItem("hp_key", q.get("key")); history.replaceState(null, "", location.pathname); }
+  if(q.get("key") || q.get("proxy")){
+    try{
+      if(q.get("proxy")){ localStorage.setItem("hp_proxy", q.get("proxy")); localStorage.removeItem("hp_key"); }
+      else { localStorage.setItem("hp_key", q.get("key")); localStorage.removeItem("hp_proxy"); }
+    }catch(e){}
+    history.replaceState(null, "", location.pathname);
+  }
   updateBadge();
   updateAreaChip();
   // 共有URLから復元: 同じ回答＋同じ日付シードで同じ結果を再計算
