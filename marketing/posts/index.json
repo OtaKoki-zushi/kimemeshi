@@ -1,0 +1,110 @@
+[
+  {
+    "id": "01-kanji-tsumu",
+    "title": "幹事が詰む街ランキング",
+    "kind": "ranking",
+    "slides": 6
+  },
+  {
+    "id": "02-yasui-machi",
+    "title": "渋谷、実は安くない",
+    "kind": "ranking",
+    "slides": 5
+  },
+  {
+    "id": "03-asamade",
+    "title": "終電を捨てられる街",
+    "kind": "ranking",
+    "slides": 5
+  },
+  {
+    "id": "04-yakei",
+    "title": "夜景の店は0.8%",
+    "kind": "ranking",
+    "slides": 5
+  },
+  {
+    "id": "05-ginza-izakaya",
+    "title": "銀座は居酒屋の街",
+    "kind": "ranking",
+    "slides": 5
+  },
+  {
+    "id": "06-cafe-machi",
+    "title": "カフェが多い街",
+    "kind": "ranking",
+    "slides": 5
+  },
+  {
+    "id": "07-ramen-zero",
+    "title": "ラーメンが1軒もない街",
+    "kind": "ranking",
+    "slides": 5
+  },
+  {
+    "id": "08-kanji-aruaru",
+    "title": "幹事あるある",
+    "kind": "empathy",
+    "slides": 6
+  },
+  {
+    "id": "09-date-aruaru",
+    "title": "デートの店選びあるある",
+    "kind": "empathy",
+    "slides": 5
+  },
+  {
+    "id": "10-kinketsu",
+    "title": "金欠大学生あるある",
+    "kind": "empathy",
+    "slides": 5
+  },
+  {
+    "id": "11-ab-warikan",
+    "title": "初デートの会計",
+    "kind": "debate",
+    "slides": 3
+  },
+  {
+    "id": "12-ab-koshitsu",
+    "title": "個室 vs カウンター",
+    "kind": "debate",
+    "slides": 3
+  },
+  {
+    "id": "13-ab-yoyaku",
+    "title": "予約する派 vs しない派",
+    "kind": "debate",
+    "slides": 3
+  },
+  {
+    "id": "14-shindan-date",
+    "title": "デートの4択",
+    "kind": "quiz",
+    "slides": 6
+  },
+  {
+    "id": "15-shindan-kanji",
+    "title": "幹事の4択",
+    "kind": "quiz",
+    "slides": 6
+  },
+  {
+    "id": "16-cheat-kanji",
+    "title": "幹事チートシート",
+    "kind": "cheatsheet",
+    "slides": 5
+  },
+  {
+    "id": "17-cheat-date",
+    "title": "デート街チートシート",
+    "kind": "cheatsheet",
+    "slides": 5
+  },
+  {
+    "id": "18-2459",
+    "title": "2,459軒を数えてわかったこと",
+    "kind": "stats",
+    "slides": 7
+  }
+]
