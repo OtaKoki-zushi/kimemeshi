@@ -142,6 +142,17 @@
     <div class="choices" id="choices"></div>
   </section>
 
+  <!-- EMPTY -->
+  <section class="screen" id="scr-empty">
+    <div class="topbar"><button class="back" onclick="restart()">‹</button></div>
+    <h1 class="q-title" style="margin-top:6vh">この条件だと<br>見つかりませんでした</h1>
+    <p style="color:var(--text-muted); font-size:14px; line-height:1.8; margin-bottom:26px" id="empty-why"></p>
+    <div class="actions" style="margin-top:0">
+      <button class="btn btn-primary" onclick="openArea()">エリアを変える</button>
+      <button class="btn btn-ghost" onclick="startFlow()">条件を選びなおす</button>
+    </div>
+  </section>
+
   <!-- LOADING -->
   <section class="screen loading" id="scr-loading">
     <div class="spinner"></div>
@@ -360,7 +371,7 @@ function currentArea(){
   return found || AREAS[0];
 }
 function openArea(){
-  $("area-note").style.display = hpKey() ? "none" : "block";
+  $("area-note").style.display = (hpKey() || hpProxy() || state.cacheDate) ? "none" : "block";
   $("area-list").innerHTML = "";
   AREAS.forEach(function(a){
     const b = document.createElement("button");
@@ -368,7 +379,9 @@ function openArea(){
     b.innerHTML = '<span class="e">' + a.e + '</span><span>' + a.t + '</span>';
     b.onclick = function(){
       try{ localStorage.setItem("area", a.id); }catch(e){}
-      updateAreaChip(); show("scr-home");
+      updateAreaChip();
+      if(state.scene !== null && state.answers.length === SCENES[state.scene].qs.length){ decide(); }
+      else show("scr-home");
     };
     $("area-list").appendChild(b);
   });
@@ -530,7 +543,9 @@ function reasonsFor(s, c, hits){
   return tags.slice(0, 4);
 }
 function runDemoEngine(){
-  const c = buildConstraints();
+  return runEngineOn(DEMO_SHOPS, buildConstraints());
+}
+function runEngineOn(shops, c){
   const rng = mulberry32(hashStr(seedOfToday()));
   state.cons = c;
   // フォールバック段階 (DESIGN.md §4): 予算→距離→ジャンル。人数・マスト設備は絶対に緩めない
@@ -542,7 +557,7 @@ function runDemoEngine(){
   ];
   let pool = [];
   for(const st of steps){
-    const cand = hardFilter(DEMO_SHOPS, c, st);
+    const cand = hardFilter(shops, c, st);
     if(cand.length) pool = cand;
     if(cand.length >= 3) break;
   }
@@ -553,7 +568,57 @@ function runDemoEngine(){
   return scored.slice(0, 5);
 }
 
-/* ---------- 決定エンジン（ホットペッパーAPI） ---------- */
+/* ---------- 事前取得データ（GitHub Actionsが毎日更新）を使う経路 ---------- */
+function walkMinutes(lat1, lng1, lat2, lng2){
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*rad) * Math.cos(lat2*rad) * Math.sin(dLng/2) * Math.sin(dLng/2);
+  const m = 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return Math.max(1, Math.round(m / 80)); // 分速80m
+}
+function nearestArea(lat, lng){
+  let best = null, bestD = Infinity;
+  AREAS.forEach(function(a){
+    if(!a.lat) return;
+    const d = walkMinutes(lat, lng, a.lat, a.lng);
+    if(d < bestD){ bestD = d; best = a; }
+  });
+  return best || AREAS[1];
+}
+function runCacheEngine(cb){
+  const c = buildConstraints();
+  state.cons = c;
+  const useArea = function(areaId, lat, lng){
+    fetchJson("data/" + areaId + ".json", 10000).then(function(list){
+      if(!list || !list.length) throw new Error("empty");
+      const pool = list.map(function(s){
+        const o = {};
+        for(const k in s) o[k] = s[k];
+        o.walk = walkMinutes(lat, lng, s.lat, s.lng);
+        return o;
+      });
+      state.live = true; state.dataMode = "cache";
+      cb(runEngineOn(pool, c));
+    }).catch(function(){
+      if(hpKey()){ runApiEngine(cb); return; }
+      state.live = false; state.dataMode = "demo";
+      cb(runEngineOn(DEMO_SHOPS, c));
+    });
+  };
+  const area = currentArea();
+  if(area.id !== "here"){ useArea(area.id, area.lat, area.lng); return; }
+  if(!navigator.geolocation){ useArea("shibuya", 35.658034, 139.701636); return; }
+  navigator.geolocation.getCurrentPosition(function(pos){
+    const la = pos.coords.latitude, ln = pos.coords.longitude;
+    useArea(nearestArea(la, ln).id, la, ln);
+  }, function(){
+    toast("位置が取れないので渋谷で探します（エリアはホームで選べます）");
+    useArea("shibuya", 35.658034, 139.701636);
+  }, { timeout: 6000 });
+}
+
+/* ---------- 決定エンジン（ホットペッパーAPI直接／プロキシ） ---------- */
 function hpParams(c, lat, lng, format){
   const p = new URLSearchParams();
   p.set("key", hpKey()); p.set("format", format);
@@ -671,16 +736,31 @@ function normalizeHpShop(s, idx){
 function decide(){
   show("scr-loading");
   $("loading-msg").textContent = ["いい店、探してる…","雰囲気まで見てる…","責任もって決めてます…"][Math.floor(Math.random()*3)];
-  state.live = apiReady();
   const done = function(queue){
     state.queue = queue; state.altIndex = 0;
     setTimeout(function(){
-      if(!queue.length){ toast("見つからず…条件を変えてみて"); show("scr-q"); renderQ(); return; }
+      if(!queue.length){ showEmpty(); return; }
       renderResult(); show("scr-result");
     }, 600);
   };
-  if(state.live) runApiEngine(done);
-  else done(runDemoEngine());
+  if(hpProxy()){ state.live = true; state.dataMode = "api"; runApiEngine(done); }
+  else runCacheEngine(done);
+}
+function showEmpty(){
+  const c = state.cons || {};
+  const bits = [];
+  if(c.cap) bits.push(c.cap + "人以上入れる店");
+  if(c.mustFlags && c.mustFlags.indexOf("private_room") >= 0) bits.push("個室あり");
+  if(c.mustFlags && c.mustFlags.indexOf("free_drink") >= 0) bits.push("飲み放題あり");
+  if(c.mustFlags && c.mustFlags.indexOf("midnight") >= 0) bits.push("深夜営業");
+  if(c.budget && c.budget.max < 99999) bits.push("予算" + c.budget.max.toLocaleString() + "円まで");
+  const area = currentArea();
+  const where = area.id === "here" ? "この辺り" : area.t;
+  $("empty-why").innerHTML = where + "だと「" + (bits.join("・") || "この条件") + "」に当てはまる店がありませんでした。<br>"
+    + (state.scene === "C"
+        ? "幹事モードでは人数・個室・飲み放題を勝手に緩めません（当日困るので）。エリアを広げるのが確実です。"
+        : "エリアを変えるか、条件をゆるめてみてください。");
+  show("scr-empty");
 }
 function renderResult(){
   const item = state.queue[state.altIndex];
@@ -706,7 +786,8 @@ function renderResult(){
   $("r-alt").textContent = remain > 0 ? "違うのがいい" : "条件を変える";
   $("r-altcount").textContent = remain > 0 ? "あと" + remain + "軒だけ代案あります" : "代案は出し切りました";
   $("credit").innerHTML = state.live
-    ? "Powered by <a style='color:inherit' href='http://webservice.recruit.co.jp/' target='_blank' rel='noopener'>ホットペッパーグルメ Webサービス</a>"
+    ? "Powered by <a style='color:inherit' href='https://webservice.recruit.co.jp/' target='_blank' rel='noopener'>ホットペッパーグルメ Webサービス</a>"
+      + (state.dataMode === "cache" && state.cacheDate ? "（" + state.cacheDate + "時点のデータ）" : "")
     : "※ デモデータ（架空のお店）で動作中";
 }
 function nextAlt(){
@@ -744,9 +825,18 @@ function configureKey(){
 function updateBadge(){
   const b = $("mode-badge");
   if(hpProxy()){ b.textContent = "プロキシ連携中・安定モード（タップで変更）"; b.classList.add("live"); }
+  else if(state.cacheDate){ b.textContent = "実店舗データ（" + state.cacheDate + "更新）"; b.classList.add("live"); }
   else if(hpKey()){ b.textContent = "ホットペッパーAPI連携中（タップで変更）"; b.classList.add("live"); }
   else { b.textContent = "デモデータで動作中（タップでAPIキー設定）"; b.classList.remove("live"); }
-  $("test-badge").style.display = apiReady() ? "block" : "none";
+  $("test-badge").style.display = (hpProxy() || (hpKey() && !state.cacheDate)) ? "block" : "none";
+}
+function loadCacheInfo(){
+  fetchJson("data/index.json", 8000).then(function(info){
+    if(!info || !info.updated_at) return;
+    const d = new Date(info.updated_at);
+    state.cacheDate = (d.getMonth() + 1) + "/" + d.getDate();
+    updateBadge();
+  }).catch(function(){});
 }
 /* ---------- 接続テスト：どの経路が通るか自動診断 ---------- */
 function testConnection(){
@@ -820,6 +910,7 @@ function toast(msg){
   }
   updateBadge();
   updateAreaChip();
+  loadCacheInfo();
   // 共有URLから復元: 同じ回答＋同じ日付シードで同じ結果を再計算
   const sc = q.get("s"), ans = q.get("a");
   if(sc && SCENES[sc] && ans){
