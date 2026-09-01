@@ -118,6 +118,7 @@
     <button class="btn btn-primary start-btn" onclick="startFlow()">決めてもらう</button>
     <button class="area-chip" id="area-chip" onclick="openArea()">📍 現在地で探す</button>
     <div class="mode-badge" id="mode-badge" onclick="configureKey()">デモデータで動作中（タップでAPIキー設定）</div>
+    <div class="mode-badge" id="test-badge" onclick="testConnection()" style="display:none">接続テストを実行</div>
   </section>
 
   <!-- AREA -->
@@ -631,8 +632,10 @@ function fetchHp(c, lat, lng, cb){
 }
 // 2段目: 公開CORS中継サービスを順に試す保険。JSONPが端末・回線側でブロックされた場合に効く
 const HP_RELAYS = [
-  function(u){ return "https://corsproxy.io/?url=" + encodeURIComponent(u); },
+  function(u){ return "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(u); },
   function(u){ return "https://api.allorigins.win/raw?url=" + encodeURIComponent(u); },
+  function(u){ return "https://corsproxy.io/?url=" + encodeURIComponent(u); },
+  function(u){ return "https://thingproxy.freeboard.io/fetch/" + u; },
 ];
 function fetchHpRelay(c, lat, lng, cb, why, idx){
   idx = idx || 0;
@@ -733,15 +736,74 @@ function configureKey(){
   const v = k.trim();
   try{ localStorage.removeItem("hp_key"); localStorage.removeItem("hp_proxy"); }catch(e){}
   if(!v){ toast("デモデータに戻しました"); }
-  else if(v.indexOf("http") === 0){ localStorage.setItem("hp_proxy", v); toast("プロキシ経由で検索します（安定モード）"); }
-  else { localStorage.setItem("hp_key", v); toast("本物のお店で検索します"); }
+  else if(v.indexOf("http") === 0){ localStorage.setItem("hp_proxy", v); }
+  else { localStorage.setItem("hp_key", v); }
   updateBadge();
+  if(v) testConnection();
 }
 function updateBadge(){
   const b = $("mode-badge");
   if(hpProxy()){ b.textContent = "プロキシ連携中・安定モード（タップで変更）"; b.classList.add("live"); }
   else if(hpKey()){ b.textContent = "ホットペッパーAPI連携中（タップで変更）"; b.classList.add("live"); }
   else { b.textContent = "デモデータで動作中（タップでAPIキー設定）"; b.classList.remove("live"); }
+  $("test-badge").style.display = apiReady() ? "block" : "none";
+}
+/* ---------- 接続テスト：どの経路が通るか自動診断 ---------- */
+function testConnection(){
+  const testParams = { range:1, genres:[], budget:null, cap:0, mustFlags:[], softFlags:[], kw:[] };
+  const lat = 35.658034, lng = 139.701636; // 渋谷で1件だけ試す
+  toast("接続をテスト中…");
+
+  if(hpProxy()){
+    const p = hpParams(testParams, lat, lng, "json");
+    p.delete("key"); p.delete("format"); p.set("count", "1");
+    fetchJson(hpProxy() + "?" + p.toString(), 15000)
+      .then(function(d){
+        const err = d && d.results && d.results.error;
+        if(err && err.length){ toast("プロキシは動作、でもAPIエラー: " + (err[0].message || "キーを確認")); return; }
+        const n = ((d.results || {}).shop || []).length;
+        toast(n ? "✅ プロキシ経由で接続OK。実店舗で検索できます" : "プロキシは動作、でも店が0件（キーを確認）");
+      })
+      .catch(function(e){ toast("❌ プロキシに接続できません。URLと公開設定（全員）を確認してください"); });
+    return;
+  }
+  if(!hpKey()){ toast("APIキーもプロキシも未設定です"); return; }
+
+  // キー方式：JSONP → 各中継の順に、どれが通るかを調べる
+  let settled = false;
+  const tag = document.createElement("script");
+  const timer = setTimeout(function(){ afterJsonp("応答なし"); }, 9000);
+  function afterJsonp(why){
+    if(settled) return; settled = true;
+    clearTimeout(timer); if(tag.parentNode) tag.parentNode.removeChild(tag);
+    testRelays(0, why);
+  }
+  window.__hpcb = function(d){
+    if(settled) return; settled = true;
+    clearTimeout(timer); if(tag.parentNode) tag.parentNode.removeChild(tag);
+    const err = d && d.results && d.results.error;
+    if(err && err.length){ toast("APIエラー: " + (err[0].message || "キーを確認してください")); return; }
+    toast("✅ 直接接続OK。実店舗で検索できます");
+  };
+  tag.onerror = function(){ afterJsonp("読み込み失敗"); };
+  const pp = hpParams(testParams, lat, lng, "jsonp"); pp.set("count", "1");
+  tag.src = HP_EP + "?" + pp.toString() + "&callback=__hpcb";
+  document.body.appendChild(tag);
+
+  function testRelays(i, why){
+    if(i >= HP_RELAYS.length){
+      toast("❌ どの経路も通りません（" + why + "）。プロキシ設置をおすすめします");
+      return;
+    }
+    const p2 = hpParams(testParams, lat, lng, "json"); p2.set("count", "1");
+    fetchJson(HP_RELAYS[i](HP_EP + "?" + p2.toString()), 8000)
+      .then(function(d){
+        const err = d && d.results && d.results.error;
+        if(err && err.length){ toast("APIエラー: " + (err[0].message || "キーを確認してください")); return; }
+        toast("✅ 中継経由で接続OK（" + (i+1) + "番目）。実店舗で検索できます");
+      })
+      .catch(function(){ testRelays(i + 1, why); });
+  }
 }
 function toast(msg){
   const t = $("toast"); t.textContent = msg; t.classList.add("show");
