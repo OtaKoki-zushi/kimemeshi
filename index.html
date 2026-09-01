@@ -527,6 +527,8 @@ function softScore(s, c, rng){
   const hits = [];
   c.kw.forEach(function(k){ if(text.indexOf(k) >= 0){ score += 2; hits.push(k); } });
   c.softFlags.forEach(function(f){ if(s.flags[f]){ score += 3; hits.push(f); } });
+  // 遠い店はゆるく減点（徒歩10分を超えた分だけ）。ハード除外はしないので0件化しない
+  if(s.walk && s.walk < 999) score -= Math.max(0, s.walk - 10) * 0.15;
   score += rng() * 0.8; // 同点帯シャッフル
   return { score:score, hits:hits };
 }

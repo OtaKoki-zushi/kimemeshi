@@ -54,6 +54,10 @@ async function get(params) {
 }
 
 function slim(s) {
+  // 設備フラグが未登録でも、キャッチコピーに明記されていれば拾う
+  // （例:「【個室】2名～40名様迄可」なのに private_room が未設定の店が実在する）
+  const text = [s.name, s.catch, s.genre?.catch].filter(Boolean).join(" ");
+  const mentions = (re) => re.test(text);
   return {
     id: s.id,
     name: s.name,
@@ -68,8 +72,10 @@ function slim(s) {
     url: s.urls?.pc || "",
     lat: Number(s.lat), lng: Number(s.lng),
     flags: {
-      private_room: yes(s.private_room), free_drink: yes(s.free_drink), night_view: yes(s.night_view),
-      midnight: yes(s.midnight), course: yes(s.course), wifi: yes(s.wifi),
+      private_room: yes(s.private_room) || mentions(/個室|完全個室|掘りごたつ個室/),
+      free_drink: yes(s.free_drink) || mentions(/飲み放題|のみ放題|飲放/),
+      night_view: yes(s.night_view) || mentions(/夜景/),
+      midnight: yes(s.midnight), course: yes(s.course) || mentions(/コース/), wifi: yes(s.wifi),
       open_air: yes(s.open_air), charter: yes(s.charter), lunch: yes(s.lunch), card: yes(s.card),
     },
   };
