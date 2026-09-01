@@ -12,7 +12,7 @@ export const POSTS = [
   id: "01-kanji-tsumu", kind: "ranking", title: "幹事が詰む街ランキング", foot: N,
   slides: [
     { type:"cover", eyebrow:"幹事のためのデータ", size:96,
-      title:"鎌倉で\n20人の飲み会、\n**ほぼ無理**でした",
+      sticker:"保存\n推奨", title:"鎌倉で\n20人の飲み会、\n**ほぼ無理**でした",
       sub:"首都圏11エリア・2,459軒を\n条件で数えた結果", foot:AR },
     { type:"list", title:"幹事が絶対に外せない3条件", bullet:"✓",
       items:["個室あり","飲み放題あり","ひとり3,500円以下｜この3つを同時に満たす店が、街によって19倍ちがった"] },
@@ -50,7 +50,7 @@ export const POSTS = [
 {
   id: "02-yasui-machi", kind: "ranking", title: "渋谷、実は安くない", foot: N,
   slides: [
-    { type:"cover", eyebrow:"街の値段", size:104, title:"渋谷、\n実は**安くない**",
+    { type:"cover", eyebrow:"街の値段", size:104, sticker:"金欠は\n保存", title:"渋谷、\n実は**安くない**",
       sub:"2,000円以下で飲める店の割合を\n11エリアで比べた", foot:AR },
     { type:"rank", title:"2,000円以下で飲める店の割合",
       rows:[{n:"吉祥寺",v:"37.4",hi:1},{n:"池袋",v:"36.9"},{n:"川崎",v:"36.2"},
@@ -109,7 +109,7 @@ n=2,459／2026年9月時点
   id: "04-yakei", kind: "ranking", title: "夜景の店は0.8%", foot: N,
   slides: [
     { type:"cover", eyebrow:"デートの現実", size:88,
-      title:"2,459軒調べて\n夜景の店は\n**20軒**でした", sub:"割合にして0.8%", foot:AR },
+      sticker:"デート前に\n保存", title:"2,459軒調べて\n夜景の店は\n**20軒**でした", sub:"割合にして0.8%", foot:AR },
     { type:"stat", label:"夜景が見える店の割合", value:"0.8", unit:"%", bg:"light",
       sub:"内訳：銀座6／新宿4／恵比寿4／渋谷3／池袋・横浜・川崎 各1\n**吉祥寺・藤沢・鎌倉・逗子は0軒。**" },
     { type:"point", size:62, title:"予約が取れないのは\n**当然だった**",
@@ -219,7 +219,7 @@ n=2,459／2026年9月時点
   id: "08-kanji-aruaru", kind: "empathy", title: "幹事あるある", foot: "キメメシ",
   slides: [
     { type:"cover", eyebrow:"共感しかない", size:104,
-      title:"幹事\n**あるある**\n7選", sub:"1個でも刺さったら、\nそれはもう幹事の才能です", foot:"タグ付けて送りつけてOK" },
+      sticker:"幹事に\n送って", title:"幹事\n**あるある**\n7選", sub:"1個でも刺さったら、\nそれはもう幹事の才能です", foot:"タグ付けて送りつけてOK" },
     { type:"list", title:"幹事あるある",
       items:["「どこでもいいよ」って言った人が\n一番めんどくさい｜だいたい後から条件を出してくる",
              "人数が前日に2回変わる｜しかも増える方向とは限らない"] },
@@ -251,7 +251,7 @@ n=2,459／2026年9月時点
   id: "09-date-aruaru", kind: "empathy", title: "デートの店選びあるある", foot: "キメメシ",
   slides: [
     { type:"cover", eyebrow:"全員通る道", size:96,
-      title:"デートの\n店選び\n**あるある**", sub:"6個中4個当てはまったら\nこのアカウントの対象です", foot:"" },
+      sticker:"わかる人\n多いはず", title:"デートの\n店選び\n**あるある**", sub:"6個中4個当てはまったら\nこのアカウントの対象です", foot:"" },
     { type:"list", title:"あるある",
       items:["インスタで保存した店、\n当日1回も開かない｜コレクションは墓場",
              "「なんでもいい」が\n一番むずかしい｜情報量ゼロで責任だけ来る"] },
@@ -308,7 +308,7 @@ n=2,459／2026年9月時点
 {
   id: "11-ab-warikan", kind: "debate", title: "初デートの会計", foot: "コメントで教えて",
   slides: [
-    { type:"cover", eyebrow:"どっち派？", size:104, title:"初デートの\n会計、\n**どっち？**", swipe:"2択で答えて", foot:"" },
+    { type:"cover", eyebrow:"どっち派？", size:104, sticker:"コメントで\n教えて", title:"初デートの\n会計、\n**どっち？**", swipe:"2択で答えて", foot:"" },
     { type:"ab", title:"初デートの会計は",
       a:{t:"きっちり割り勘",d:"対等でいたい。\n次も誘いやすい。"},
       b:{t:"誘ったほうが\n出す",d:"誘った責任は\n持ちたい。"},
@@ -330,7 +330,7 @@ B：誘ったほうが出す
 {
   id: "12-ab-koshitsu", kind: "debate", title: "個室 vs カウンター", foot: "コメントで教えて",
   slides: [
-    { type:"cover", eyebrow:"どっち派？", size:100, title:"デートで\n座るなら\n**どっち？**", swipe:"2択で答えて", foot:"" },
+    { type:"cover", eyebrow:"どっち派？", size:100, sticker:"コメントで\n教えて", title:"デートで\n座るなら\n**どっち？**", swipe:"2択で答えて", foot:"" },
     { type:"ab", title:"デートで座るなら",
       a:{t:"個室",d:"周りを気にせず\n話せる。845軒ある。"},
       b:{t:"カウンター",d:"横並びで\n沈黙が気まずくない。"},
@@ -354,7 +354,7 @@ B：カウンター
 {
   id: "13-ab-yoyaku", kind: "debate", title: "予約する派 vs しない派", foot: "コメントで教えて",
   slides: [
-    { type:"cover", eyebrow:"どっち派？", size:98, title:"飲みに行くとき\n**予約する？**", swipe:"2択で答えて", foot:"" },
+    { type:"cover", eyebrow:"どっち派？", size:98, sticker:"コメントで\n教えて", title:"飲みに行くとき\n**予約する？**", swipe:"2択で答えて", foot:"" },
     { type:"ab", title:"飲みに行くとき",
       a:{t:"必ず\n予約する",d:"入れなかった時の\n絶望を知っている。"},
       b:{t:"行ってから\n決める",d:"その日の気分が\n全て。"},
@@ -439,7 +439,7 @@ AかBだけコメントください。`,
   id: "16-cheat-kanji", kind: "cheatsheet", title: "幹事チートシート", foot: N,
   slides: [
     { type:"cover", eyebrow:"保存版", size:96,
-      title:"幹事が\n**死なない街**\nチートシート", sub:"人数別・目的別に\n行くべき街を決めた", foot:AR },
+      sticker:"頼まれたら\nこれ", title:"幹事が\n**死なない街**\nチートシート", sub:"人数別・目的別に\n行くべき街を決めた", foot:AR },
     { type:"list", title:"人数で街を選ぶ",
       items:["4〜10人｜どの街でも成立する。近さで選んでいい",
              "11〜20人｜新宿・銀座・池袋・川崎。ここから急に減る",
@@ -472,7 +472,7 @@ AかBだけコメントください。`,
   id: "17-cheat-date", kind: "cheatsheet", title: "デート街チートシート", foot: N,
   slides: [
     { type:"cover", eyebrow:"保存版", size:92,
-      title:"デートの街、\n**目的別に\n決めておく**", sub:"当日迷わないための一覧", foot:AR },
+      sticker:"前日に\n見て", title:"デートの街、\n**目的別に\n決めておく**", sub:"当日迷わないための一覧", foot:AR },
     { type:"list", title:"時間帯で決める",
       items:["昼から夕方｜鎌倉・逗子・藤沢（カフェ比率が高い）",
              "夜メイン｜恵比寿・中目黒（個室率41.9%）",
@@ -503,7 +503,7 @@ AかBだけコメントください。`,
   id: "18-2459", kind: "stats", title: "2,459軒を数えてわかったこと", foot: N,
   slides: [
     { type:"cover", eyebrow:"全部数えた", size:96,
-      title:"首都圏の飲食店\n**2,459軒**を\n数えてわかったこと", sub:"5つだけ置いていきます", foot:AR },
+      sticker:"保存\n推奨", title:"首都圏の飲食店\n**2,459軒**を\n数えてわかったこと", sub:"5つだけ置いていきます", foot:AR },
     { type:"stat", label:"01. 夜景が見える店", value:"20", unit:"軒",
       sub:"全体の0.8%。半分が銀座と新宿に集中。\n**みんなが同じ20軒を取り合っている。**" },
     { type:"stat", label:"02. 100人以上入る店", value:"395", unit:"軒", bg:"dark",
