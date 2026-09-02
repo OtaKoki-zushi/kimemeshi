@@ -11,7 +11,8 @@ node render.mjs          # 全投稿を書き出す
 node sheet.mjs           # 全スライドを1枚のコンタクトシートにして確認する
 ```
 
-必要なもの：Node 20以上と Playwright（`npm i -g playwright` 済みの環境なら追加インストール不要）。
+必要なもの：Node 20以上と Playwright（`npm i -g playwright` 済みの環境なら追加インストール不要。
+入っていなければこのフォルダで `npm i && npx playwright install chromium`）。
 日本語フォントは `fonts/` に同梱しているので、環境にフォントが入っていなくても同じ見た目で出ます。
 
 ## 投稿の書き方

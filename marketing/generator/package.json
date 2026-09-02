@@ -1,0 +1,9 @@
+{
+  "name": "kimemeshi-post-generator",
+  "private": true,
+  "type": "module",
+  "description": "投稿画像ジェネレータ。node render.mjs で marketing/posts/ にPNGを書き出す。",
+  "devDependencies": {
+    "playwright": "^1.49.1"
+  }
+}

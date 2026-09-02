@@ -10,6 +10,38 @@ const br = (s) => mark(s).replace(/\n/g, "<br>");
 
 const SITE = "otakoki-zushi.github.io\n/kimemeshi";
 
+/* 参照の順位バッジ配色（1位から順に 金・銀・橙・緑・青・紫・桃） */
+const RANKC = ["#F0B429", "#A6AEB4", "#E8853C", "#5FBF7E", "#4FA3D9", "#9B7BD4", "#E8709F", "#8FA0A8"];
+/* 説明文の **強調** は、参照にならって黄色マーカーではなく赤文字にする */
+const red = (t) => esc(t).replace(/\*\*([\s\S]+?)\*\*/g, '<span class="rd">$1</span>').replace(/\n/g, "<br>");
+/* 見出しの **強調** はオレンジの文字色（縁取りは残す） */
+const headline = (t) => esc(t).replace(/\*\*([\s\S]+?)\*\*/g, '<span class="o">$1</span>').replace(/\n/g, "<br>");
+
+/* マスコット「キメどん」。参照のタコの位置にあたる固定要素。
+   写真が使えないぶん、毎回同じ絵が出ることでアカウントの見分けがつくようにする。 */
+const MASCOT = `<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" stroke="#33261A" stroke-width="7" stroke-linecap="round">
+    <path d="M74 34c-7-9 5-14-2-23" opacity=".55"/>
+    <path d="M100 28c-7-9 5-14-2-23" opacity=".55"/>
+    <path d="M126 34c-7-9 5-14-2-23" opacity=".55"/>
+  </g>
+  <g transform="rotate(-16 150 60)">
+    <rect x="146" y="10" width="9" height="86" rx="4" fill="#E8C79A" stroke="#33261A" stroke-width="6"/>
+    <rect x="162" y="10" width="9" height="86" rx="4" fill="#E8C79A" stroke="#33261A" stroke-width="6"/>
+  </g>
+  <path d="M42 92c14-26 102-26 116 0z" fill="#FFF8EE" stroke="#33261A" stroke-width="7" stroke-linejoin="round"/>
+  <ellipse cx="100" cy="95" rx="72" ry="15" fill="#FFF8EE" stroke="#33261A" stroke-width="7"/>
+  <path d="M30 96c0 62 30 92 70 92s70-30 70-92z" fill="#F5892B" stroke="#33261A" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M40 120c8 6 22 9 60 9s52-3 60-9" stroke="#FFD23F" stroke-width="9" fill="none" stroke-linecap="round" opacity=".85"/>
+  <ellipse cx="72" cy="150" rx="11" ry="14" fill="#33261A"/>
+  <ellipse cx="128" cy="150" rx="11" ry="14" fill="#33261A"/>
+  <circle cx="76" cy="145" r="4" fill="#FFF8EE"/>
+  <circle cx="132" cy="145" r="4" fill="#FFF8EE"/>
+  <ellipse cx="52" cy="163" rx="12" ry="8" fill="#E23B3B" opacity=".35"/>
+  <ellipse cx="148" cy="163" rx="12" ry="8" fill="#E23B3B" opacity=".35"/>
+  <path d="M90 165c4 6 16 6 20 0" stroke="#33261A" stroke-width="6" fill="none" stroke-linecap="round"/>
+</svg>`;
+
 /* 色は3色＋インクに絞る（増やすと途端に素人っぽくなる）
    メイン=サンセットオレンジ / サブ=クリーム / アクセント=イエロー */
 const CSS = `
@@ -148,6 +180,102 @@ body{font-family:"Noto",sans-serif;-webkit-font-smoothing:antialiased;overflow:h
 .ab .k{font-family:"Dela";font-size:52px;opacity:.85}
 .ab .t{font-family:"Round";font-weight:900;font-size:45px;line-height:1.4}
 .ab .d{font-size:26px;line-height:1.7;opacity:.85;font-weight:700}
+
+/* ================= 参照型（順位カード＋1位を隠す） =================
+   参照/ のランキング投稿の構造を移植したもの。
+   ヘッダー帯 / 順位カード7枚 / コメント誘導フッター の3段で1枚に収める。
+   参照は右側に料理写真を置いているが、ホットペッパーの写真は使えないので
+   そこを「数値タイル」に置き換えている。数字がこのアカウントの絵になる。 */
+.ref{background:#FBEBD2;color:#33261A}
+/* 参照型のクリーム面では、縁取り白抜きだと沈むので濃い文字＋黄色い影にする */
+.ref .out{color:#33261A;-webkit-text-stroke:0;text-shadow:9px 10px 0 #FFD23F}
+.ref .out .mk{background:#E23B3B;color:#FFF8EE;box-shadow:none}
+.ref .stat .big{color:#E23B3B;-webkit-text-stroke:0;text-shadow:7px 8px 0 rgba(51,38,26,.13)}
+.ref .eyebrow{background:#33261A;color:#FFD23F}
+.ref .foot .brand{background:#33261A;color:#FFD23F}
+.ref .swipe{background:#33261A;color:#FFF3E2}
+.ref::before{content:"";position:absolute;inset:0;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cpath d='M30 8c2 12 8 18 20 20-12 2-18 8-20 20-2-12-8-18-20-20 12-2 18-8 20-20z' fill='%23F5C77E' opacity='.55'/%3E%3Cpath d='M112 78c1.4 8 5.6 12 14 14-8.4 1.4-12.6 5.6-14 14-1.4-8-5.6-12-14-14 8.4-1.4 12.6-5.6 14-14z' fill='%23F0B429' opacity='.4'/%3E%3Ccircle cx='128' cy='24' r='4' fill='%23F5C77E' opacity='.5'/%3E%3Ccircle cx='58' cy='120' r='3' fill='%23F0B429' opacity='.45'/%3E%3C/svg%3E")}
+.slide.r7{padding:40px 38px 34px}
+
+/* ---- ヘッダー帯 ---- */
+.r7head{display:grid;grid-template-columns:236px 1fr;align-items:center;gap:8px;min-height:296px}
+.r7mascot{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px}
+.r7mascot svg{width:196px;height:196px;overflow:visible}
+.bubble{position:relative;background:#FFF;border:6px solid #33261A;border-radius:26px;
+  padding:11px 18px;font-family:"Round";font-weight:900;font-size:25px;line-height:1.25;
+  text-align:center;color:#33261A;box-shadow:5px 6px 0 rgba(51,38,26,.18)}
+.bubble::after{content:"";position:absolute;left:36px;bottom:-19px;width:0;height:0;
+  border:14px solid transparent;border-top-color:#33261A;border-bottom:0}
+.r7title{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.ribbon{position:relative;background:#E23B3B;color:#FFF;font-family:"Round";font-weight:900;
+  font-size:36px;letter-spacing:.02em;padding:12px 46px;
+  clip-path:polygon(0 0,100% 0,calc(100% - 22px) 50%,100% 100%,0 100%,22px 50%);
+  box-shadow:0 6px 0 rgba(51,38,26,.18)}
+.r7h{font-family:"Round";font-weight:900;line-height:1.16;letter-spacing:-.01em;
+  color:#FFF8EE;-webkit-text-stroke:11px #33261A;paint-order:stroke fill;
+  text-shadow:8px 9px 0 rgba(51,38,26,.22)}
+.r7h .o{color:#F5892B}
+.crown{font-size:52px;margin-left:10px;-webkit-text-stroke:0;text-shadow:none}
+
+/* ---- 順位カード ---- */
+.r7rows{flex:1;display:flex;flex-direction:column;gap:9px;min-height:0;margin-top:6px}
+.r7row{flex:1;display:grid;grid-template-columns:132px 1fr 218px;align-items:stretch;gap:0;
+  background:#FFFDF8;border:5px solid #33261A;border-radius:20px;overflow:hidden;
+  box-shadow:0 6px 0 rgba(51,38,26,.16)}
+.r7row .bd{background:var(--c);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;color:#FFF;border-right:5px solid #33261A;gap:0}
+.r7row .bd b{font-family:"Dela";font-size:46px;line-height:.98;
+  text-shadow:0 4px 0 rgba(51,38,26,.35)}
+.r7row .bd i{font-style:normal;font-family:"Round";font-weight:900;font-size:21px;opacity:.95}
+.r7row .tx{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 22px;min-width:0}
+.r7row .nm{font-family:"Round";font-weight:900;font-size:46px;line-height:1.1;color:#33261A;
+  letter-spacing:-.02em;white-space:nowrap}
+.r7row .ds{font-family:"Noto";font-weight:700;font-size:23px;line-height:1.42;color:#6B5847}
+.r7row .ds .rd{color:#E23B3B}
+.r7row .vt{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-left:5px solid #33261A;background:var(--vc,#FFF3DF);gap:6px;padding:0 8px}
+.r7row .vt b{font-family:"Dela";font-size:44px;line-height:1;color:#33261A;letter-spacing:-.03em}
+.r7row .vt b em{font-style:normal;font-family:"Round";font-weight:900;font-size:24px;margin-left:2px}
+.r7row .vt .mini{width:132px;height:9px;border-radius:99px;background:rgba(51,38,26,.16)}
+.r7row .vt .mini i{display:block;height:100%;border-radius:99px;background:var(--c)}
+/* 1位を隠す */
+.r7row.q .nm{background:#1C140D;color:#1C140D;border-radius:9px;padding:2px 26px;
+  display:inline-flex;align-items:center;justify-content:center;min-width:340px}
+.r7row.q .nm::after{content:"？";color:#FFF;font-size:44px}
+.r7row.q .vt{background:#1C140D}
+.r7row.q .vt b{color:#FFD23F}
+.r7row.q .ds{color:#8A7563}
+
+/* ---- コメント誘導フッター ---- */
+.r7src{font-family:"Noto";font-weight:700;font-size:19px;color:#8A7563;text-align:right;
+  margin-top:8px;letter-spacing:.01em}
+.r7foot{display:flex;align-items:center;gap:14px;margin-top:8px}
+.ask{flex:1;background:#33261A;color:#FFF3E2;border-radius:99px;padding:16px 30px;
+  font-family:"Round";font-weight:900;font-size:31px;text-align:center;letter-spacing:-.01em}
+.ask b{color:#FFD23F}
+.r7foot .bm{font-family:"Round";font-weight:900;font-size:26px;background:#FFD23F;color:#33261A;
+  border:5px solid #33261A;border-radius:99px;padding:11px 24px;white-space:nowrap}
+
+/* ---- 1位の発表（参照の“めくり”に相当する1枚） ---- */
+.rv{height:100%;display:flex}
+.rvcard{flex:1;position:relative;overflow:hidden;background:#FFFDF8;border:7px solid #33261A;
+  border-radius:44px;box-shadow:0 12px 0 rgba(51,38,26,.18);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:48px 46px}
+.rvcard::before{content:"";position:absolute;top:0;left:0;right:0;height:22px;background:#F0B429}
+.rv .crownbig{font-size:98px;line-height:1;margin-top:-6px}
+.rv .badge{font-family:"Round";font-weight:900;font-size:44px;color:#FFF;background:#F0B429;
+  border:6px solid #33261A;border-radius:99px;padding:6px 42px;box-shadow:0 7px 0 rgba(51,38,26,.2);
+  margin-top:-10px}
+.rv .nm{font-family:"Round";font-weight:900;font-size:136px;line-height:1.12;color:#33261A;
+  letter-spacing:.005em;text-shadow:9px 10px 0 #FFD23F;margin-top:10px}
+.rv .val{font-family:"Dela";font-size:172px;line-height:1;color:#E23B3B;letter-spacing:-.03em;
+  text-shadow:7px 8px 0 rgba(51,38,26,.13);margin-top:2px}
+.rv .val em{font-style:normal;font-size:64px;font-family:"Round";font-weight:900}
+.rv .ds{font-family:"Noto";font-weight:700;font-size:33px;line-height:1.72;color:#5B4636;
+  margin-top:10px;text-align:center;max-width:820px}
+.rv .rvmascot{position:absolute;right:-4px;bottom:-18px}
+.rv .rvmascot svg{width:186px;height:186px;overflow:visible}
 `;
 
 function top(slide, i, n) {
@@ -160,7 +288,7 @@ function foot(slide, post) {
   return `<div class="foot"><div class="brand">キメメシ</div>
     <div class="meta">${br(meta)}</div></div>`;
 }
-const BG = { dark: "ink", light: "cream", accent: "sun", ink: "ink", cream: "cream", sun: "sun" };
+const BG = { dark: "ink", light: "cream", accent: "sun", ink: "ink", cream: "cream", sun: "sun", ref: "ref" };
 const wrap = (s, p, i, n, body, cls) =>
   `<div class="slide ${BG[s.bg] || cls}">
      ${s.sticker ? `<div class="sticker">${br(s.sticker)}</div>` : ""}
@@ -182,7 +310,7 @@ const TYPES = {
   `, "cream"),
 
   rank(s, p, i, n) {
-    const vals = s.rows.map(r => Math.abs(parseFloat(r.v)));
+    const vals = s.rows.map(r => Math.abs(parseFloat(String(r.v).replace(/,/g, ""))));
     const max = Math.max(...vals);
     const gap = s.rows.length <= 4 ? 30 : s.rows.length <= 5 ? 22 : 15;
     const nm = s.rows.length <= 5 ? 40 : 35;
@@ -253,6 +381,52 @@ const TYPES = {
     <div class="h1 out" style="font-size:${s.size || 74}px">${br(s.title)}</div>
     ${s.sub ? `<div class="sub" style="opacity:.95">${br(s.sub)}</div>` : ""}
   `, "sun"),
+
+  // 参照型ランキング。1枚に7位まで入れ、1位だけ黒塗りにしてコメントを取りに行く。
+  // rows: [{ n:"街名", v:"38.6", u:"%", d:"説明。**ここは赤**", q:true で1位を隠す }]
+  rank7(s, p, i, n) {
+    const vals = s.rows.map(r => Math.abs(parseFloat(String(r.v).replace(/,/g, ""))) || 0);
+    const max = Math.max(...vals, 1);
+    const rows = s.rows.map((r, k) => {
+      const rank = r.rk != null ? r.rk : k + 1;
+      const c = RANKC[Math.min(rank, RANKC.length) - 1];
+      const nm = r.q ? `<div class="nm"></div>` : `<div class="nm">${esc(r.n)}</div>`;
+      const vb = r.q ? `<b>？</b>` : `<b>${esc(r.v)}${r.u ? `<em>${esc(r.u)}</em>` : ""}</b>`;
+      const bar = r.q ? "" : `<span class="mini"><i style="width:${Math.max(6, Math.round(vals[k] / max * 100))}%"></i></span>`;
+      return `<div class="r7row${r.q ? " q" : ""}" style="--c:${c}">
+        <div class="bd"><b>${rank}</b><i>位</i></div>
+        <div class="tx">${nm}${r.d ? `<div class="ds">${red(r.d)}</div>` : ""}</div>
+        <div class="vt">${vb}${bar}</div>
+      </div>`;
+    }).join("");
+    return `<div class="slide ref r7">
+      <div class="r7head">
+        <div class="r7mascot">${MASCOT}<div class="bubble">${br(s.bubble || "2,459軒\n数えた")}</div></div>
+        <div class="r7title">
+          ${s.eyebrow ? `<div class="ribbon">${esc(s.eyebrow)}</div>` : ""}
+          <div class="r7h" style="font-size:${s.size || 76}px">${headline(s.title)}</div>
+        </div>
+      </div>
+      <div class="r7rows">${rows}</div>
+      <div class="r7src">${esc(s.src || (p.foot ? p.foot.replace(/\n/g, " ") : "n=2,459 / 2026年9月"))}・データ：ホットペッパーグルメ Webサービス</div>
+      <div class="r7foot">
+        <div class="ask">${br(s.ask || "1位はどこだと思う？ **コメントで教えて**").replace(/<span class="mk">/g, "<b>").replace(/<\/span>/g, "</b>")}</div>
+        <div class="bm">キメメシ</div>
+      </div>
+    </div>`;
+  },
+
+  // 1位の発表。参照でいう“めくった先”。カルーセルのピークに置く。
+  reveal: (s, p, i, n) => wrap(s, p, i, n, `
+    <div class="rv"><div class="rvcard">
+      <div class="crownbig">👑</div>
+      <div class="badge">第1位</div>
+      <div class="nm">${br(s.name)}</div>
+      ${s.value ? `<div class="val">${esc(s.value)}${s.unit ? `<em>${esc(s.unit)}</em>` : ""}</div>` : ""}
+      ${s.sub ? `<div class="ds">${br(s.sub)}</div>` : ""}
+      <div class="rvmascot">${MASCOT}</div>
+    </div></div>
+  `, "ref"),
 };
 
 export function slideHtml(slide, post, i, n) {

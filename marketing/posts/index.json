@@ -106,5 +106,23 @@
     "title": "2,459軒を数えてわかったこと",
     "kind": "stats",
     "slides": 7
+  },
+  {
+    "id": "19-r7-yasui",
+    "title": "2,000円以下で飲める街",
+    "kind": "rank7",
+    "slides": 9
+  },
+  {
+    "id": "20-r7-aruku",
+    "title": "駅から遠い街ランキング",
+    "kind": "rank7",
+    "slides": 9
+  },
+  {
+    "id": "21-r7-kashikiri",
+    "title": "貸切できる街ランキング",
+    "kind": "rank7",
+    "slides": 9
   }
 ]

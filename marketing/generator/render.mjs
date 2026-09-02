@@ -1,6 +1,9 @@
 // 投稿定義（posts.js）から Instagram 用の PNG を書き出す。
 // 使い方: node render.mjs [出力先ディレクトリ]
-import pw from "/opt/node22/lib/node_modules/playwright/index.js";
+// playwright は環境によって置き場所が違うので、まずローカル解決を試す
+let pw;
+try { pw = (await import("playwright")).default; }
+catch { pw = (await import("/opt/node22/lib/node_modules/playwright/index.js")).default; }
 import { slideHtml } from "./template.js";
 import { POSTS } from "./posts.js";
 import { mkdir, writeFile, rm } from "node:fs/promises";
