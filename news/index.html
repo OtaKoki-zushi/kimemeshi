@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ミギヒダリ — 偏りを自分で選ぶニュース</title>
+<style>
+  :root{
+    --bg:#F6F4EF; --surface:#FFFFFF; --surface-2:#EFECE5; --text:#1C1B19; --muted:#6B675F; --faint:#9C978C;
+    --border:#E2DED4; --left:#1E8C7E; --right:#D9662B; --center:#7A776F; --accent:#1C1B19; --accent-ink:#FFFFFF;
+    --left-soft:rgba(30,140,126,.12); --right-soft:rgba(217,102,43,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#121316; --surface:#1B1D21; --surface-2:#24272C; --text:#EEECE7; --muted:#A39F96; --faint:#6E6A63;
+      --border:#2E3137; --left:#3DBBA9; --right:#F08A4B; --center:#9A968D; --accent:#EEECE7; --accent-ink:#121316;
+      --left-soft:rgba(61,187,169,.14); --right-soft:rgba(240,138,75,.14);
+    }
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ background:var(--bg); color:var(--text); }
+  body{ font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.55; }
+  #app{ max-width:720px; margin:0 auto; padding:max(14px,env(safe-area-inset-top)) 16px 80px; }
+  a{ color:inherit; }
+  button{ font-family:inherit; color:inherit; }
+
+  header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  h1{ font-size:22px; font-weight:900; letter-spacing:.02em; }
+  h1 .l{ color:var(--left); } h1 .r{ color:var(--right); }
+  .updated{ font-size:12px; color:var(--muted); white-space:nowrap; }
+  .demo{ background:var(--right-soft); border:1px solid var(--right); color:var(--text); border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:12px; }
+
+  /* ===== dial ===== */
+  .dial{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:12px; }
+  .dial-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .dial-label{ font-size:13px; color:var(--muted); }
+  .dial-value{ font-size:17px; font-weight:800; }
+  .range{ -webkit-appearance:none; appearance:none; width:100%; height:10px; border-radius:99px; outline:none;
+    background:linear-gradient(90deg,var(--left),var(--center) 50%,var(--right)); }
+  .range::-webkit-slider-thumb{ -webkit-appearance:none; width:28px; height:28px; border-radius:50%; background:var(--surface); border:3px solid var(--text); cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  .range::-moz-range-thumb{ width:24px; height:24px; border-radius:50%; background:var(--surface); border:3px solid var(--text); cursor:pointer; }
+  .range:disabled{ opacity:.35; }
+  .ends{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:6px; }
+  .ends b{ font-weight:700; } .ends .el{ color:var(--left); } .ends .er{ color:var(--right); }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .chip{ border:1px solid var(--border); background:var(--surface-2); border-radius:99px; padding:6px 12px; font-size:13px; font-weight:600; cursor:pointer; }
+  .chip.on{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .row{ display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+  .row .k{ font-size:12px; color:var(--muted); min-width:4.5em; }
+  .seg{ display:inline-flex; background:var(--surface-2); border-radius:10px; padding:3px; }
+  .seg button{ border:none; background:none; padding:5px 11px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; color:var(--muted); }
+  .seg button.on{ background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+
+  /* ===== spectrum (outlet dots) ===== */
+  .spectrum{ position:relative; height:30px; margin:12px 6px 0; }
+  .spectrum .axis{ position:absolute; left:0; right:0; top:14px; height:2px; background:var(--border); }
+  .spectrum .win{ position:absolute; top:6px; height:18px; border-radius:9px; background:var(--surface-2); border:1px dashed var(--faint); }
+  .spectrum .dot{ position:absolute; top:9px; width:12px; height:12px; margin-left:-6px; border-radius:50%; border:2px solid var(--surface); }
+  .spectrum .dot.off{ opacity:.25; }
+
+  /* ===== tabs ===== */
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin:16px 0 12px; overflow-x:auto; scrollbar-width:none; }
+  .tabs button{ border:none; background:none; padding:10px 12px; font-size:14px; font-weight:700; color:var(--muted); border-bottom:3px solid transparent; cursor:pointer; white-space:nowrap; }
+  .tabs button.on{ color:var(--text); border-color:var(--text); }
+  .search{ width:100%; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:10px; padding:10px 12px; font-size:15px; font-family:inherit; margin-bottom:10px; }
+  .hint{ font-size:13px; color:var(--muted); margin:4px 0 12px; }
+
+  /* ===== cards ===== */
+  .card{ display:block; text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+  .card:hover{ border-color:var(--faint); }
+  .meta{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin-bottom:4px; flex-wrap:wrap; }
+  .src{ display:inline-flex; align-items:center; gap:5px; font-weight:700; color:var(--text); }
+  .src i{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .title{ font-size:15px; font-weight:700; }
+  .more{ border:none; background:var(--surface-2); border-radius:99px; padding:2px 9px; font-size:12px; font-weight:600; cursor:pointer; color:var(--muted); }
+  .empty{ text-align:center; color:var(--muted); padding:40px 0; font-size:14px; }
+
+  .topic{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px; }
+  .topic h3{ font-size:15px; font-weight:800; margin-bottom:4px; }
+  .lean{ display:inline-block; font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; margin-right:6px; }
+  .lean.L{ background:var(--left-soft); color:var(--left); } .lean.R{ background:var(--right-soft); color:var(--right); } .lean.C{ background:var(--surface-2); color:var(--muted); }
+  .cols{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+  .col h4{ font-size:11px; font-weight:800; letter-spacing:.06em; margin-bottom:6px; }
+  .col.L h4{ color:var(--left); } .col.C h4{ color:var(--muted); } .col.R h4{ color:var(--right); }
+  .col a{ display:block; text-decoration:none; font-size:13px; padding:8px; background:var(--surface-2); border-radius:8px; margin-bottom:6px; }
+  .col a small{ display:block; font-size:11px; color:var(--muted); font-weight:700; margin-bottom:2px; }
+  .col .none{ font-size:12px; color:var(--faint); padding:8px; border:1px dashed var(--border); border-radius:8px; }
+  @media (max-width:560px){ .cols{ grid-template-columns:1fr; } }
+
+  .bar{ display:flex; height:10px; border-radius:99px; overflow:hidden; background:var(--surface-2); margin:8px 0 2px; }
+  .bar span{ display:block; height:100%; }
+  .legend{ display:flex; justify-content:space-between; font-size:11px; color:var(--muted); }
+
+  .outlet{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+  .outlet .head{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .outlet .name{ font-weight:800; font-size:15px; }
+  .outlet .note{ font-size:12px; color:var(--muted); margin:2px 0 8px; }
+  .outlet .num{ font-variant-numeric:tabular-nums; font-weight:700; font-size:13px; min-width:5.5em; text-align:right; }
+  .outlet .range{ height:6px; }
+  .outlet.disabled{ opacity:.5; }
+  .toggle{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); cursor:pointer; }
+  .btn{ border:1px solid var(--border); background:var(--surface); border-radius:10px; padding:10px 14px; font-weight:700; font-size:14px; cursor:pointer; }
+  .about{ font-size:13px; color:var(--muted); background:var(--surface-2); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+  .about p + p{ margin-top:6px; }
+  footer{ margin-top:24px; font-size:12px; color:var(--faint); text-align:center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1><span class="l">ミギ</span><span class="r">ヒダリ</span></h1>
+    <span class="updated" id="updated"></span>
+  </header>
+  <div id="demo" class="demo" hidden></div>
+
+  <section class="dial">
+    <div class="dial-top">
+      <span class="dial-label">読みたい論調</span>
+      <span class="dial-value" id="dialValue"></span>
+    </div>
+    <input class="range" id="lean" type="range" min="-2" max="2" step="0.1" value="0" aria-label="論調（左〜右）">
+    <div class="ends"><b class="el">◀ 左派・リベラル</b><b>中道</b><b class="er">保守・右派 ▶</b></div>
+    <div class="spectrum" id="spectrum"></div>
+    <div class="chips" id="presets"></div>
+    <div class="row">
+      <span class="k">幅</span>
+      <div class="seg" id="width"></div>
+    </div>
+  </section>
+
+  <nav class="tabs" id="tabs"></nav>
+  <main id="view"></main>
+  <footer>記事は各媒体のサイトに掲載されたものへのリンクです。見出しの取得に Google ニュースの RSS を利用しています。</footer>
+</div>
+
+<script>
+// ---------------- 状態 ----------------
+const PRESETS = [
+  { id: "left",   label: "左寄り",   v: -1.4, w: "narrow" },
+  { id: "center", label: "中道",     v: 0,    w: "narrow" },
+  { id: "right",  label: "右寄り",   v: 1.4,  w: "narrow" },
+  { id: "mix",    label: "全方位ミックス", mix: true },
+];
+const WIDTHS = { narrow: { label: "狭く", sigma: 0.45 }, normal: { label: "ふつう", sigma: 0.8 }, wide: { label: "広く", sigma: 1.3 } };
+const TABS = [
+  { id: "feed",    label: "ニュース" },
+  { id: "compare", label: "読み比べ" },
+  { id: "blind",   label: "片側だけの報道" },
+  { id: "outlets", label: "媒体の位置" },
+];
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("migihidari:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("migihidari:" + k, JSON.stringify(v)); } catch {} },
+};
+const state = {
+  lean: store.get("lean", 0), width: store.get("width", "normal"), mix: store.get("mix", false),
+  tab: store.get("tab", "feed"), q: "", overrides: store.get("overrides", {}), hidden: store.get("hidden", {}),
+};
+let DATA = null;
+
+// ---------------- 便利関数 ----------------
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : "#");
+const scoreOf = (id) => (id in state.overrides ? state.overrides[id] : DATA.srcById[id].score);
+const enabled = (id) => !state.hidden[id];
+const pct = (v) => ((v + 2) / 4) * 100;
+function leanWord(v) {
+  const a = Math.abs(v);
+  if (a < 0.35) return "中道";
+  const side = v < 0 ? "左" : "右";
+  return a < 0.9 ? `やや${side}` : a < 1.6 ? `${side}寄り` : `強く${side}`;
+}
+function colorOf(v) {
+  // 左=青緑、中央=灰、右=橙 の間を補間する
+  const css = getComputedStyle(document.documentElement);
+  const L = css.getPropertyValue("--left").trim(), C = css.getPropertyValue("--center").trim(), R = css.getPropertyValue("--right").trim();
+  const t = Math.max(-1, Math.min(1, v / 2));
+  return t < 0 ? `color-mix(in srgb, ${L} ${Math.round(-t * 100)}%, ${C})` : `color-mix(in srgb, ${R} ${Math.round(t * 100)}%, ${C})`;
+}
+function ago(iso) {
+  if (!iso) return "";
+  const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (m < 1) return "たった今";
+  if (m < 60) return `${m}分前`;
+  if (m < 60 * 24) return `${Math.round(m / 60)}時間前`;
+  return `${Math.round(m / 1440)}日前`;
+}
+const bucket = (v) => (v < -0.5 ? "L" : v > 0.5 ? "R" : "C");
+
+// ---------------- 記事の選び方 ----------------
+// スライダーの位置を中心に、媒体スコアとの距離で重みを付ける（ガウス）。
+// 「全方位ミックス」のときは 左・中・右 を順番に1本ずつ並べ、どちらにも偏らないようにする。
+function visibleArticles() {
+  const q = state.q.trim();
+  let list = DATA.articles.filter((a) => enabled(a.s) && (!q || a.t.includes(q)));
+  if (state.mix) {
+    const bins = { L: [], C: [], R: [] };
+    for (const a of list) bins[bucket(scoreOf(a.s))].push(a);
+    const out = [];
+    while (bins.L.length || bins.C.length || bins.R.length) for (const k of ["L", "C", "R"]) if (bins[k].length) out.push(bins[k].shift());
+    return out;
+  }
+  const sigma = WIDTHS[state.width].sigma;
+  return list
+    .map((a) => ({ a, w: Math.exp(-((scoreOf(a.s) - state.lean) ** 2) / (2 * sigma * sigma)) }))
+    .filter((x) => x.w >= 0.3)
+    .map((x) => x.a);
+}
+
+// ---------------- 描画 ----------------
+function renderDial() {
+  $("#lean").value = state.lean;
+  $("#lean").disabled = state.mix;
+  $("#dialValue").textContent = state.mix ? "全方位ミックス" : leanWord(state.lean);
+  $("#dialValue").style.color = state.mix ? "" : colorOf(state.lean);
+  $("#presets").innerHTML = PRESETS.map((p) => {
+    const on = p.mix ? state.mix : !state.mix && Math.abs(state.lean - p.v) < 0.05 && state.width === p.w;
+    return `<button class="chip${on ? " on" : ""}" data-preset="${p.id}">${p.label}</button>`;
+  }).join("");
+  $("#width").innerHTML = Object.entries(WIDTHS).map(([k, w]) =>
+    `<button class="${state.width === k ? "on" : ""}" data-width="${k}" ${state.mix ? "disabled" : ""}>${w.label}</button>`).join("");
+
+  // 媒体の点と「いま読んでいる範囲」
+  const sigma = WIDTHS[state.width].sigma;
+  const reach = sigma * Math.sqrt(-2 * Math.log(0.3)); // 重み0.3になる距離
+  const lo = state.mix ? -2 : Math.max(-2, state.lean - reach), hi = state.mix ? 2 : Math.min(2, state.lean + reach);
+  const dots = DATA.sources.filter((s) => enabled(s.id)).map((s) => {
+    const v = scoreOf(s.id), inside = v >= lo - 1e-9 && v <= hi + 1e-9;
+    return `<span class="dot${inside ? "" : " off"}" title="${esc(s.name)}" style="left:${pct(v)}%;background:${colorOf(v)}"></span>`;
+  }).join("");
+  $("#spectrum").innerHTML = `<div class="axis"></div><div class="win" style="left:${pct(lo)}%;width:${pct(hi) - pct(lo)}%"></div>${dots}`;
+}
+
+function articleCard(a) {
+  const s = DATA.srcById[a.s], v = scoreOf(a.s);
+  const topic = DATA.topicOf[a.id];
+  const others = topic ? new Set(topic.a.map((id) => DATA.byId[id].s).filter(enabled)).size - 1 : 0;
+  return `<a class="card" href="${esc(safeUrl(a.u))}" target="_blank" rel="noopener noreferrer">
+    <div class="meta"><span class="src"><i style="background:${colorOf(v)}"></i>${esc(s.name)}</span><span>${ago(a.d)}</span>
+      ${others > 0 ? `<button class="more" data-topic="${topic.id}">他${others}媒体の報じ方 →</button>` : ""}</div>
+    <div class="title">${esc(a.t)}</div></a>`;
+}
+
+function topicCard(t) {
+  const arts = t.a.map((id) => DATA.byId[id]).filter((a) => enabled(a.s));
+  const first = new Map(); // 1媒体1本
+  for (const a of arts) if (!first.has(a.s)) first.set(a.s, a);
+  const list = [...first.values()].sort((x, y) => scoreOf(x.s) - scoreOf(y.s));
+  const mean = list.reduce((acc, a) => acc + scoreOf(a.s), 0) / list.length;
+  const col = (k, label) => {
+    const items = list.filter((a) => bucket(scoreOf(a.s)) === k);
+    return `<div class="col ${k}"><h4>${label}</h4>${items.length ? items.map((a) =>
+      `<a href="${esc(safeUrl(a.u))}" target="_blank" rel="noopener noreferrer"><small>${esc(DATA.srcById[a.s].name)}</small>${esc(a.t)}</a>`).join("")
+      : `<div class="none">この側の媒体は報じていません</div>`}</div>`;
+  };
+  const b = bucket(mean);
+  return `<div class="topic" id="topic-${t.id}">
+    <h3>${esc(list[0] ? list[Math.floor(list.length / 2)].t : "")}</h3>
+    <div class="meta"><span class="lean ${b}">報道の重心: ${leanWord(mean)}</span><span>${list.length}媒体が報道</span></div>
+    <div class="cols">${col("L", "左派・リベラル")}${col("C", "中道")}${col("R", "保守・右派")}</div></div>`;
+}
+
+function liveTopics() {
+  const q = state.q.trim();
+  return DATA.topics
+    .map((t) => ({ t, n: new Set(t.a.map((id) => DATA.byId[id]).filter((a) => enabled(a.s)).map((a) => a.s)).size }))
+    .filter(({ t, n }) => n >= 2 && (!q || t.a.some((id) => DATA.byId[id].t.includes(q))))
+    .sort((x, y) => y.n - x.n)
+    .map((x) => x.t);
+}
+
+function sidesOf(t) {
+  const set = new Set(t.a.map((id) => DATA.byId[id].s).filter(enabled));
+  const b = { L: 0, C: 0, R: 0 };
+  for (const s of set) b[bucket(scoreOf(s))]++;
+  return b;
+}
+
+function renderView() {
+  $("#tabs").innerHTML = TABS.map((t) => `<button class="${state.tab === t.id ? "on" : ""}" data-tab="${t.id}">${t.label}</button>`).join("");
+  const search = `<input class="search" id="q" type="search" placeholder="キーワードで絞り込み（例: 防衛費、物価）" value="${esc(state.q)}">`;
+  let html = "";
+
+  if (state.tab === "feed") {
+    const list = visibleArticles();
+    const bins = { L: 0, C: 0, R: 0 };
+    for (const a of list) bins[bucket(scoreOf(a.s))]++;
+    const total = list.length || 1;
+    html = search + `<div class="bar" title="表示中の記事の内訳">
+        <span style="width:${(bins.L / total) * 100}%;background:var(--left)"></span>
+        <span style="width:${(bins.C / total) * 100}%;background:var(--center)"></span>
+        <span style="width:${(bins.R / total) * 100}%;background:var(--right)"></span></div>
+      <div class="legend"><span>左派 ${bins.L}本</span><span>中道 ${bins.C}本</span><span>右派 ${bins.R}本</span></div>
+      <p class="hint">表示中 ${list.length}本。スライダーを動かすと、読む媒体の範囲が変わります。</p>`
+      + (list.length ? list.slice(0, 150).map(articleCard).join("") : `<div class="empty">この範囲の記事はありません。幅を広げてみてください。</div>`);
+  }
+
+  if (state.tab === "compare") {
+    const topics = liveTopics();
+    html = search + `<p class="hint">同じ出来事を、立場の違う媒体がどう見出しにしたかを並べています（複数媒体が報じた話題）。</p>`
+      + (topics.length ? topics.slice(0, 60).map(topicCard).join("") : `<div class="empty">複数の媒体が報じた話題が見つかりませんでした。</div>`);
+  }
+
+  if (state.tab === "blind") {
+    const topics = liveTopics();
+    const onlyL = topics.filter((t) => { const b = sidesOf(t); return b.L >= 2 && b.R === 0 && b.C === 0; });
+    const onlyR = topics.filter((t) => { const b = sidesOf(t); return b.R >= 2 && b.L === 0 && b.C === 0; });
+    const skewL = topics.filter((t) => { const b = sidesOf(t); return b.L >= 2 && b.R === 0 && b.C > 0; });
+    const skewR = topics.filter((t) => { const b = sidesOf(t); return b.R >= 2 && b.L === 0 && b.C > 0; });
+    const section = (title, list) => `<h2 style="font-size:15px;margin:18px 0 8px">${title}（${list.length}）</h2>`
+      + (list.length ? list.slice(0, 20).map(topicCard).join("") : `<div class="empty" style="padding:16px 0">該当なし</div>`);
+    html = search + `<p class="hint">片方の立場の媒体だけが取り上げている話題です。いつも読んでいる側からは見えにくいニュースを探せます。</p>`
+      + section("左派媒体だけが報じている", onlyL) + section("右派媒体だけが報じている", onlyR)
+      + section("右派媒体は報じていない（左派＋中道）", skewL) + section("左派媒体は報じていない（右派＋中道）", skewR);
+  }
+
+  if (state.tab === "outlets") {
+    html = `<div class="about"><p>各媒体の位置（-2＝左派〜+2＝右派）は、社説や論調についての一般的な評価をもとにした<b>目安</b>です。正解はありません。</p>
+      <p>納得できない位置はスライダーで動かせます。変更はこの端末にだけ保存され、ニュース一覧にすぐ反映されます。</p></div>`
+      + [...DATA.sources].sort((a, b) => scoreOf(a.id) - scoreOf(b.id)).map((s) => {
+        const v = scoreOf(s.id), changed = s.id in state.overrides;
+        return `<div class="outlet${enabled(s.id) ? "" : " disabled"}">
+          <div class="head"><span class="name"><span class="src"><i style="background:${colorOf(v)}"></i>${esc(s.name)}</span></span>
+            <span class="num" style="color:${colorOf(v)}">${v > 0 ? "+" : ""}${v.toFixed(1)} ${leanWord(v)}${changed ? " *" : ""}</span></div>
+          <div class="note">${esc(s.note || "")}${s.count != null ? `・直近${s.count}本${s.ok === false ? "（取得失敗）" : ""}` : ""}</div>
+          <input class="range" type="range" min="-2" max="2" step="0.1" value="${v}" data-outlet="${s.id}" aria-label="${esc(s.name)}の位置">
+          <div class="row"><label class="toggle"><input type="checkbox" data-hide="${s.id}" ${enabled(s.id) ? "checked" : ""}> 表示する</label></div></div>`;
+      }).join("")
+      + `<button class="btn" id="reset">位置をすべて初期値に戻す</button>`;
+  }
+
+  $("#view").innerHTML = html;
+  const q = $("#q");
+  if (q) q.addEventListener("input", (e) => { state.q = e.target.value; const pos = e.target.selectionStart; renderView(); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos); });
+}
+
+function render() { renderDial(); renderView(); }
+
+// ---------------- 操作 ----------------
+$("#lean").addEventListener("input", (e) => { state.lean = +e.target.value; store.set("lean", state.lean); render(); });
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-preset],[data-width],[data-tab],[data-topic],#reset");
+  if (!el) return;
+  if (el.dataset.preset) {
+    const p = PRESETS.find((x) => x.id === el.dataset.preset);
+    state.mix = !!p.mix;
+    if (!p.mix) { state.lean = p.v; state.width = p.w; }
+  } else if (el.dataset.width) state.width = el.dataset.width;
+  else if (el.dataset.tab) state.tab = el.dataset.tab;
+  else if (el.dataset.topic) {
+    e.preventDefault(); e.stopPropagation();
+    state.tab = "compare"; state.q = "";
+    render();
+    document.getElementById("topic-" + el.dataset.topic)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    store.set("tab", state.tab);
+    return;
+  } else if (el.id === "reset") { state.overrides = {}; state.hidden = {}; }
+  ["lean", "width", "mix", "tab", "overrides", "hidden"].forEach((k) => store.set(k, state[k]));
+  render();
+});
+document.addEventListener("input", (e) => {
+  const id = e.target.dataset?.outlet;
+  if (!id) return;
+  const v = +e.target.value;
+  if (Math.abs(v - DATA.srcById[id].score) < 1e-9) delete state.overrides[id]; else state.overrides[id] = v;
+  store.set("overrides", state.overrides);
+  renderDial();
+  // スライダー操作中にDOMを作り直すとつまみが外れるので、数値だけ更新する
+  const num = e.target.closest(".outlet").querySelector(".num");
+  num.textContent = `${v > 0 ? "+" : ""}${v.toFixed(1)} ${leanWord(v)}${id in state.overrides ? " *" : ""}`;
+  num.style.color = colorOf(v);
+});
+document.addEventListener("change", (e) => {
+  if (e.target.dataset?.outlet) renderView();
+  const id = e.target.dataset?.hide;
+  if (!id) return;
+  if (e.target.checked) delete state.hidden[id]; else state.hidden[id] = true;
+  store.set("hidden", state.hidden);
+  render();
+});
+
+// ---------------- データ ----------------
+function index(data) {
+  data.srcById = Object.fromEntries(data.sources.map((s) => [s.id, s]));
+  data.byId = Object.fromEntries(data.articles.map((a) => [a.id, a]));
+  data.topicOf = {};
+  for (const t of data.topics) for (const id of t.a) data.topicOf[id] = t;
+  data.articles = data.articles.filter((a) => data.srcById[a.s]);
+  data.articles.sort((a, b) => (b.d || "").localeCompare(a.d || ""));
+  return data;
+}
+
+// ネットに繋がっていない／まだ一度も取得していないときの見本データ（媒体名・見出しは架空）
+function demoData() {
+  const sources = [
+    { id: "dA", name: "A新聞（架空）", score: -1.6, note: "見本：左派系" },
+    { id: "dB", name: "B新聞（架空）", score: -0.9, note: "見本：リベラル寄り" },
+    { id: "dC", name: "C通信（架空）", score: -0.1, note: "見本：通信社" },
+    { id: "dD", name: "D放送（架空）", score: 0.1, note: "見本：公共放送" },
+    { id: "dE", name: "E新聞（架空）", score: 0.9, note: "見本：保守寄り" },
+    { id: "dF", name: "Fニュース（架空）", score: 1.7, note: "見本：保守系" },
+  ];
+  const now = Date.now(), h = (n) => new Date(now - n * 3600e3).toISOString();
+  const raw = [
+    ["dA", "防衛費増額の財源 国民負担の拡大に批判相次ぐ", 1, "t1"],
+    ["dB", "防衛費増額の財源 与党内で議論が本格化", 2, "t1"],
+    ["dD", "防衛費増額の財源 政府が来月にも方針", 3, "t1"],
+    ["dF", "防衛力強化へ 防衛費増額の財源確保が焦点", 2, "t1"],
+    ["dE", "海上保安庁 領海侵入した外国公船に警告", 1, "t2"],
+    ["dF", "外国公船が領海侵入 政府は厳重抗議", 4, "t2"],
+    ["dA", "非正規労働者の賃金格差 実態調査で浮き彫りに", 5, "t3"],
+    ["dB", "非正規の賃金格差 調査で改善進まず", 6, "t3"],
+    ["dC", "日経平均が続伸 半導体関連株に買い", 2, "t4"],
+    ["dD", "日経平均 続伸で取引終える", 3, "t4"],
+    ["dE", "日経平均続伸 半導体株がけん引", 3, "t4"],
+    ["dA", "原発の再稼働 地元住民から不安の声", 7, null],
+    ["dC", "台風が北上 週末にかけて大雨のおそれ", 1, null],
+    ["dE", "憲法改正の議論 国会で論点整理へ", 8, null],
+    ["dF", "スパイ防止法の制定を求める声 有識者が提言", 9, null],
+    ["dB", "選択的夫婦別姓 法制審の議論再開を求める集会", 10, null],
+  ];
+  const articles = raw.map(([s, t, ago], i) => ({ id: "a" + i, s, t, u: "#", d: h(ago) }));
+  const topics = {};
+  raw.forEach(([, , , tid], i) => { if (tid) (topics[tid] ||= []).push("a" + i); });
+  return { demo: true, updated_at: null, sources, articles, topics: Object.entries(topics).map(([id, a]) => ({ id, a })) };
+}
+
+(async () => {
+  try {
+    const res = await fetch("data/news.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    DATA = index(await res.json());
+  } catch {
+    DATA = index(demoData());
+    $("#demo").hidden = false;
+    $("#demo").textContent = "見本データを表示中です（媒体名・見出しは架空）。GitHub Actions の「ニュース更新」を実行すると実際のニュースに切り替わります。";
+  }
+  if (DATA.updated_at) {
+    const d = new Date(DATA.updated_at);
+    $("#updated").textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} 更新`;
+  }
+  render();
+})();
+</script>
+</body>
+</html>

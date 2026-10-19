@@ -1,0 +1,19 @@
+{
+  "_comment": "score: -2（左派）〜 0（中道）〜 +2（右派）。社説・論調に対する一般的な評価をもとにした目安で、絶対的な正解ではない。アプリの設定画面から各自で上書きできる。",
+  "sources": [
+    { "id": "akahata",  "name": "しんぶん赤旗",   "site": "jcp.or.jp",          "score": -2.0, "note": "日本共産党の機関紙" },
+    { "id": "litera",   "name": "リテラ",         "site": "lite-ra.com",        "score": -1.9, "note": "政権批判色の強いWebメディア" },
+    { "id": "gendai",   "name": "日刊ゲンダイ",   "site": "nikkan-gendai.com",  "score": -1.6, "note": "反政権の論調で知られる夕刊紙" },
+    { "id": "tokyo",    "name": "東京新聞",       "site": "tokyo-np.co.jp",     "score": -1.4, "note": "リベラル色の強いブロック紙" },
+    { "id": "asahi",    "name": "朝日新聞",       "site": "asahi.com",          "score": -1.0, "note": "リベラル寄りの全国紙" },
+    { "id": "mainichi", "name": "毎日新聞",       "site": "mainichi.jp",        "score": -0.8, "note": "中道左派寄りの全国紙" },
+    { "id": "kyodo",    "name": "共同通信",       "site": "47news.jp",          "score": -0.4, "note": "地方紙に配信する通信社" },
+    { "id": "jiji",     "name": "時事通信",       "site": "jiji.com",           "score": -0.1, "note": "通信社。速報中心" },
+    { "id": "nhk",      "name": "NHK",            "site": "nhk.or.jp",          "score":  0.0, "note": "公共放送。抑制的な論調" },
+    { "id": "nikkei",   "name": "日本経済新聞",   "site": "nikkei.com",         "score":  0.4, "note": "経済紙。市場・企業寄り" },
+    { "id": "yomiuri",  "name": "読売新聞",       "site": "yomiuri.co.jp",      "score":  0.9, "note": "保守寄りの全国紙" },
+    { "id": "sankei",   "name": "産経新聞",       "site": "sankei.com",         "score":  1.5, "note": "保守色の強い全国紙" },
+    { "id": "zakzak",   "name": "zakzak（夕刊フジ）", "site": "zakzak.co.jp",   "score":  1.8, "note": "保守系のWebメディア" },
+    { "id": "hanada",   "name": "Hanadaプラス",   "site": "hanada-plus.jp",     "score":  2.0, "note": "保守系月刊誌のWeb版" }
+  ]
+}
